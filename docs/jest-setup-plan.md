@@ -251,7 +251,3 @@ describe("Edge Cases", () => {
 
 });
 ```
-
----
-
-*Actual test implementation will happen on Day 3 after Member 1 shares the algorithm source code.*
