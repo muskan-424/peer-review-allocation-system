@@ -198,5 +198,3 @@ Send to Instructor Dashboard
 ```
 
 ---
-
-*This document will be used in Day 3 for writing actual Jest test cases.*
