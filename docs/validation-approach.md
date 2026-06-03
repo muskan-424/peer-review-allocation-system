@@ -1,6 +1,5 @@
 # Validation Approach & Analytics Metrics
 **Prepared by:** Member 5 — QA & Analytics Engineer  
-**Project:** Peer Review Allocation with Conflict Rules  
 **Day:** 2  
 
 ---
