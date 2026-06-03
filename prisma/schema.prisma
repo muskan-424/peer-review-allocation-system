@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Team {
+  team_id   String @id @default(uuid())
+  team_name String
+
+  students Student[]
+}
+
+model Student {
+  student_id   String @id @default(uuid())
+  name         String
+  email        String @unique
+  status       String @default("active")
+  review_count Int    @default(0)
+
+  team_id String
+  team    Team @relation(fields: [team_id], references: [team_id])
+
+  submissions Submission[]
+  reviews     ReviewTask[]
+
+  reviewerHistory PairHistory[] @relation("Reviewer")
+  revieweeHistory PairHistory[] @relation("Reviewee")
+}
+
+model Submission {
+  submission_id String @id @default(uuid())
+
+  owner_id String
+  owner    Student @relation(fields: [owner_id], references: [student_id])
+
+  assignment_id String
+  submitted_at  DateTime @default(now())
+
+  review_count Int    @default(0)
+  status       String @default("pending")
+
+  reviewTasks ReviewTask[]
+}
+
+model ReviewTask {
+  task_id String @id @default(uuid())
+
+  submission_id String
+  submission    Submission @relation(fields: [submission_id], references: [submission_id])
+
+  reviewer_id String
+  reviewer    Student @relation(fields: [reviewer_id], references: [student_id])
+
+  assigned_at  DateTime @default(now())
+  completed_at DateTime?
+
+  score  Float?
+  status String @default("assigned")
+}
+
+model PairHistory {
+  history_id String @id @default(uuid())
+
+  reviewer_id String
+  reviewer Student @relation("Reviewer", fields: [reviewer_id], references: [student_id])
+
+  reviewee_id String
+  reviewee Student @relation("Reviewee", fields: [reviewee_id], references: [student_id])
+
+  assignment_id String
+  pair_count Int @default(0)
+}
