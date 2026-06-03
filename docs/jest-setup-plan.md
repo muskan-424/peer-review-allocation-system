@@ -94,7 +94,7 @@ __tests__/
 
 ## 4. Sample Test Skeletons
 
-> Note: These are skeleton structures. Actual implementation will be done in Day 3 once the algorithm code is ready from Member 1.
+> Note: These are skeleton structures. Actual implementation will be done once the algorithm code is ready.
 
 ### candidateGeneration.test.ts
 ```typescript
