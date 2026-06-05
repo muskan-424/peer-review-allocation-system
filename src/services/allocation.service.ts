@@ -50,35 +50,24 @@ export async function allocateReviews(assignmentId: string): Promise<AllocationS
       submission.reviewTasks.map((t) => t.reviewerId)
     );
 
-    // Step 1 – HC-05: start with ALL active students
-    let pool = allActiveStudents.filter((s) => s.status === "ACTIVE");
-
-    // Step 2 – HC-01: remove the submission owner
-    pool = pool.filter((s) => s.id !== owner.id);
-
-    // Step 3 – HC-02: remove same-team students
-    pool = pool.filter((s) => s.teamId !== ownerTeam);
-
-    // Step 4 – HC-04: remove already-assigned reviewers
-    pool = pool.filter((s) => !existingReviewerIds.has(s.id));
-
-    // Step 5 – SC-01: remove prior reviewer-reviewee pairs (soft)
-    const priorReviewerIds = new Set(
-      allPairHistory
-        .filter((ph) => ph.revieweeId === owner.id)
-        .map((ph) => ph.reviewerId)
+    // Hard Constraint Filtering
+    let pool = filterCandidates(
+      allActiveStudents,
+      owner.id,
+      ownerTeam,
+      existingReviewerIds
     );
 
-    const poolWithoutPriors = pool.filter((s) => !priorReviewerIds.has(s.id));
-    if (poolWithoutPriors.length >= MIN_REVIEWS) {
-      pool = poolWithoutPriors;  // SC-01 applied
-    } else {
-      // Relax SC-01 – not enough reviewers remain without prior pairs
-      relaxedConstraints.push(`SC-01 relaxed for submission ${submission.id}`);
-    }
-
-    // Step 6 – SC-02: sort by reviewCount ascending (fewest first)
-    pool.sort((a, b) => a.reviewCount - b.reviewCount);
+    // Soft Constraint Sorting and Workload Balancing
+    const { sortedPool } = sortCandidates(
+      pool,
+      allPairHistory,
+      owner.id,
+      MIN_REVIEWS,
+      relaxedConstraints,
+      submission.id
+    );
+    pool = sortedPool;
 
     // Step 7 – HC-03: feasibility check
     if (pool.length < MIN_REVIEWS) {
@@ -175,4 +164,64 @@ export async function allocateSingle(submissionId: string): Promise<AllocationRe
     assignedReviewers: [],
     tasksCreated:      summary.tasksCreated,
   };
+}
+
+/**
+ * Hard Constraint Filtering
+ * HC-05: Only ACTIVE students
+ * HC-01: No Self Review
+ * HC-02: No Same Team Review
+ * HC-04: No Duplicate Review Assignment
+ */
+export function filterCandidates<T extends { id: string; status: string; teamId?: string | null }>(
+  students: T[],
+  ownerId: string,
+  ownerTeamId: string | null | undefined,
+  existingReviewerIds: Set<string>
+): T[] {
+  let pool = students.filter((s) => s.status === "ACTIVE");
+  pool = pool.filter((s) => s.id !== ownerId);
+  if (ownerTeamId) {
+    pool = pool.filter((s) => s.teamId !== ownerTeamId);
+  }
+  pool = pool.filter((s) => !existingReviewerIds.has(s.id));
+  return pool;
+}
+
+/**
+ * Soft Constraint Sorting and Workload Balancing
+ * SC-01: Avoid Repeat Reviewer Pairs
+ * SC-02: Workload Balancing (reviewCount ascending)
+ */
+export function sortCandidates<
+  T extends { id: string; reviewCount: number },
+  P extends { reviewerId: string; revieweeId: string }
+>(
+  pool: T[],
+  pairHistory: P[],
+  ownerId: string,
+  minReviews: number,
+  relaxedConstraints: string[],
+  submissionId: string
+): { sortedPool: T[]; sc01Applied: boolean } {
+  const priorReviewerIds = new Set(
+    pairHistory
+      .filter((ph) => ph.revieweeId === ownerId)
+      .map((ph) => ph.reviewerId)
+  );
+
+  const poolWithoutPriors = pool.filter((s) => !priorReviewerIds.has(s.id));
+  let sc01Applied = false;
+  let finalPool = [...pool];
+
+  if (poolWithoutPriors.length >= minReviews) {
+    finalPool = poolWithoutPriors;
+    sc01Applied = true;
+  } else {
+    relaxedConstraints.push(`SC-01 relaxed for submission ${submissionId}`);
+  }
+
+  finalPool.sort((a, b) => a.reviewCount - b.reviewCount);
+
+  return { sortedPool: finalPool, sc01Applied };
 }
