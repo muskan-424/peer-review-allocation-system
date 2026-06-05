@@ -1,74 +1,123 @@
+// prisma/schema.prisma
+// Run: npx prisma migrate dev --name init
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
-model Team {
-  team_id   String @id @default(uuid())
-  team_name String
 
-  students Student[]
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  DROPPED
+}
+
+enum SubmissionStatus {
+  PENDING
+  UNDER_REVIEW
+  COMPLETE
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+}
+
+enum UserRole {
+  INSTRUCTOR
+  STUDENT
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  role         UserRole    @default(STUDENT)
+  student      Student?
+  createdAt    DateTime    @default(now())
+}
+
+model Team {
+  id           String      @id @default(uuid())
+  name         String
+  assignmentId String
+  students     Student[]
+  createdAt    DateTime    @default(now())
 }
 
 model Student {
-  student_id   String @id @default(uuid())
+  id           String        @id @default(uuid())
   name         String
-  email        String @unique
-  status       String @default("active")
-  review_count Int    @default(0)
+  email        String        @unique
+  status       StudentStatus @default(ACTIVE)
+  reviewCount  Int           @default(0)
+  teamId       String
+  team         Team          @relation(fields: [teamId], references: [id])
+  userId       String?       @unique
+  user         User?         @relation(fields: [userId], references: [id])
 
-  team_id String
-  team    Team @relation(fields: [team_id], references: [team_id])
+  // Submissions this student owns
+  submissions  Submission[]
 
-  submissions Submission[]
-  reviews     ReviewTask[]
+  // Review tasks assigned to this student (they are the reviewer)
+  reviewTasks  ReviewTask[]  @relation("ReviewerTasks")
 
-  reviewerHistory PairHistory[] @relation("Reviewer")
-  revieweeHistory PairHistory[] @relation("Reviewee")
+  // Pair history as reviewer
+  pairHistoryAsReviewer  PairHistory[] @relation("ReviewerHistory")
+  // Pair history as reviewee
+  pairHistoryAsReviewee  PairHistory[] @relation("RevieweeHistory")
+
+  createdAt    DateTime      @default(now())
 }
 
 model Submission {
-  submission_id String @id @default(uuid())
+  id           String           @id @default(uuid())
+  assignmentId String
+  ownerId      String
+  owner        Student          @relation(fields: [ownerId], references: [id])
+  status       SubmissionStatus @default(PENDING)
+  reviewCount  Int              @default(0)
+  submittedAt  DateTime         @default(now())
 
-  owner_id String
-  owner    Student @relation(fields: [owner_id], references: [student_id])
+  // Review tasks for this submission
+  reviewTasks  ReviewTask[]
 
-  assignment_id String
-  submitted_at  DateTime @default(now())
-
-  review_count Int    @default(0)
-  status       String @default("pending")
-
-  reviewTasks ReviewTask[]
+  createdAt    DateTime         @default(now())
 }
 
 model ReviewTask {
-  task_id String @id @default(uuid())
+  id           String     @id @default(uuid())
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id])
+  reviewerId   String
+  reviewer     Student    @relation("ReviewerTasks", fields: [reviewerId], references: [id])
+  status       TaskStatus @default(PENDING)
+  score        Float?
+  assignedAt   DateTime   @default(now())
+  completedAt  DateTime?
 
-  submission_id String
-  submission    Submission @relation(fields: [submission_id], references: [submission_id])
-
-  reviewer_id String
-  reviewer    Student @relation(fields: [reviewer_id], references: [student_id])
-
-  assigned_at  DateTime @default(now())
-  completed_at DateTime?
-
-  score  Float?
-  status String @default("assigned")
+  // Unique: one reviewer per submission
+  @@unique([submissionId, reviewerId])
 }
 
 model PairHistory {
-  history_id String @id @default(uuid())
+  id           String   @id @default(uuid())
+  reviewerId   String
+  reviewer     Student  @relation("ReviewerHistory", fields: [reviewerId], references: [id])
+  revieweeId   String
+  reviewee     Student  @relation("RevieweeHistory", fields: [revieweeId], references: [id])
+  assignmentId String
+  pairCount    Int      @default(1)
+  createdAt    DateTime @default(now())
 
-  reviewer_id String
-  reviewer Student @relation("Reviewer", fields: [reviewer_id], references: [student_id])
-
-  reviewee_id String
-  reviewee Student @relation("Reviewee", fields: [reviewee_id], references: [student_id])
-
-  assignment_id String
-  pair_count Int @default(0)
+  @@unique([reviewerId, revieweeId, assignmentId])
 }
