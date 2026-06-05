@@ -32,9 +32,9 @@ export default function AllocationEngine() {
 
   useEffect(() => {
     api.get('/submissions').then(r => {
-      const list = r.data.data ?? [];
+      const list: any[] = r.data.data ?? [];
       if (list.length) {
-        setSubmissions(list.map((s: any) => ({
+        setSubmissions(list.map((s) => ({
           id: s.id,
           label: `${s.owner?.name ?? 'Unknown'} – Submission ${s.id.slice(0,6)}`
         })));

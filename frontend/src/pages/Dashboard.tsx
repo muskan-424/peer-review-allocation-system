@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Users, FileText, ClipboardList, ShieldCheck, CheckCircle } from 'lucide-react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -25,7 +26,7 @@ const MOCK_ACTIVITY = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ students: 120, submissions: 114, tasks: 228, fairness: 98 });
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
