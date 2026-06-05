@@ -1,0 +1,29 @@
+{
+  "teams": [
+    {
+      "team_id": "T1",
+      "team_name": "Team Alpha"
+    }
+  ],
+
+  "students": [
+    {
+      "student_id": "S1",
+      "name": "A",
+      "email": "a@example.com",
+      "team_id": "T1",
+      "status": "active",
+      "review_count": 0
+    }
+  ],
+
+  "submissions": [
+    {
+      "submission_id": "SUB1",
+      "owner_id": "S1",
+      "assignment_id": "A1",
+      "status": "submitted",
+      "review_count": 0
+    }
+  ]
+}
